@@ -1,0 +1,34 @@
+name: 卸売日報の収集
+
+on:
+  schedule:
+    - cron: "0 4 * * *"        # 毎日 13:00（日本時間）
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: "さかのぼる日数（初回は 90 など）"
+        default: "12"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 日報を集める
+        env:
+          DAYS_BACK: ${{ github.event.inputs.days_back || '12' }}
+        run: python collect.py
+      - name: データを保存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898499+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "卸売データ更新 $(date -u +%Y-%m-%d)"
+          git push
